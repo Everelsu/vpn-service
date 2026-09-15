@@ -71,10 +71,16 @@
 			<Money minor={plan.priceMinor} currency={plan.currency} />
 		</span>
 		{#if savings !== null}
+			<!--
+				«в день» is the whole label, not decoration. No plan carries a discount: this number is
+				measured against the worst daily rate on offer (plan-value.ts), so a bare «−45%» reads
+				as a sale nobody is running and a price that was never charged. Naming the basis turns
+				the same figure into what it actually is — this tariff costs that much less per day.
+			-->
 			<span
-				class="mt-1 inline-block rounded-full bg-accent/[0.14] px-2 py-0.5 text-4xs font-semibold text-accent tabular-nums"
+				class="mt-1 inline-block rounded-full bg-accent/[0.14] px-2 py-0.5 text-4xs font-semibold text-accent"
 			>
-				−{savings}%
+				<span class="tabular-nums">−{savings}%</span> в день
 			</span>
 		{/if}
 	</span>
