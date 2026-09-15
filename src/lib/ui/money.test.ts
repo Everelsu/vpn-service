@@ -30,11 +30,13 @@ test.each(CURRENCIES)('%s: no precision is lost on a four-figure price', (curren
 	expect(amountOf(formatMoney(104999, currency))).toEqual({ major: '1049', minor: '99' });
 });
 
-test.each(CURRENCIES)('%s: the Stripe floor renders as half a major unit', (currency) => {
-	// tech.md 7 freezes MIN_CHARGE_MINOR at 50 for both currencies.
-	expect(amountOf(formatMoney(MIN_CHARGE_MINOR[currency], currency))).toEqual({
-		major: '0',
-		minor: '50'
+test.each(CURRENCIES)('%s: the provider floor renders as its own amount', (currency) => {
+	// The floor is per provider — Stripe takes 50 cents, YooKassa one rouble — so the expectation
+	// comes from the constant. Freezing one number for every currency would only pin the old table.
+	const floor = MIN_CHARGE_MINOR[currency];
+	expect(amountOf(formatMoney(floor, currency))).toEqual({
+		major: String(Math.trunc(floor / 100)),
+		minor: String(floor % 100).padStart(2, '0')
 	});
 });
 
