@@ -6,6 +6,7 @@ import { UserService } from './auth/user-service';
 import {
 	CheckoutInputParser,
 	CheckoutService,
+	ManualGrantService,
 	OrderService,
 	PaymentWebhookService,
 	PriceCalculator,
@@ -31,7 +32,13 @@ import { JobWorker } from './jobs/worker';
 import { log } from './log';
 import { PlanInputParser, PlanService } from './plans';
 import { RateLimiter } from './rate-limit';
-import { ReconcileInputParser, SubscriptionReader, SubscriptionService } from './subscriptions';
+import {
+	AdminMessageInputParser,
+	GrantInputParser,
+	ReconcileInputParser,
+	SubscriptionReader,
+	SubscriptionService
+} from './subscriptions';
 import { FaqService, SupportTicketService, TicketInputParser } from './support';
 
 /**
@@ -123,6 +130,9 @@ export const checkout = new CheckoutService(
 	log
 );
 
+/** Access the owner hands out after taking the money outside the app. See grant-service.ts. */
+export const grants = new ManualGrantService(orders, plans, users, jobs, log);
+
 export const checkoutInput = new CheckoutInputParser();
 
 export const promoCheckInput = new PromoCheckInputParser();
@@ -168,6 +178,11 @@ export const subscriptions = new SubscriptionService(db);
 
 /** A16 — the panel resolves the Telegram id an admin can see into the subscription id the job wants. */
 export const reconcileInput = new ReconcileInputParser();
+
+/** The two by-hand forms in the panel: grant a term, and write to somebody. */
+export const grantInput = new GrantInputParser();
+
+export const adminMessageInput = new AdminMessageInputParser();
 
 /** Read model for the pages: one person's access, assembled from three domains (A7, A9). */
 export const access = new SubscriptionReader(subscriptions, orders, plans, marzban, log);

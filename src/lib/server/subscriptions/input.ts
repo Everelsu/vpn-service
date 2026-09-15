@@ -69,3 +69,66 @@ export class ReconcileInputParser {
 			: { ok: false, error: fieldErrors(result.issues) };
 	}
 }
+
+/**
+ * The two forms the owner uses to run the shop by hand, both keyed on the same Telegram id and for
+ * the same reason as reconcile above: it is the number a human actually holds.
+ *
+ * They live here rather than in billing because what they name is a person and a term of access,
+ * not a payment — no money passes through this app any more (grant-service.ts says what does).
+ */
+const MAX_MESSAGE_LENGTH = 2000;
+
+const planIdField = v.pipe(
+	textField('Тариф: выберите значение'),
+	v.trim(),
+	v.regex(/^\d+$/, 'Тариф: выберите значение'),
+	v.maxLength(16, 'Тариф: выберите значение'),
+	v.transform(Number),
+	v.integer('Тариф: выберите значение'),
+	v.minValue(1, 'Тариф: выберите значение')
+);
+
+const GrantSchema = v.object({
+	telegramId: ReconcileSchema.entries.telegramId,
+	planId: planIdField
+});
+
+export type GrantInput = v.InferOutput<typeof GrantSchema>;
+
+export class GrantInputParser {
+	parse(raw: unknown): Result<GrantInput, Record<string, string>> {
+		const result = v.safeParse(GrantSchema, raw);
+
+		return result.success
+			? { ok: true, value: result.output }
+			: { ok: false, error: fieldErrors(result.issues) };
+	}
+}
+
+const AdminMessageSchema = v.object({
+	telegramId: ReconcileSchema.entries.telegramId,
+	/**
+	 * Trimmed before the length checks, so a field holding only spaces is empty rather than long
+	 * enough. The ceiling is Telegram's own message limit at 4096 minus room for the prefix the
+	 * sender adds; 2000 matches what a support request may be, which keeps one number in the head.
+	 */
+	text: v.pipe(
+		textField('Сообщение: заполните поле'),
+		v.trim(),
+		v.minLength(1, 'Сообщение: заполните поле'),
+		v.maxLength(MAX_MESSAGE_LENGTH, `Сообщение: не длиннее ${MAX_MESSAGE_LENGTH} символов`)
+	)
+});
+
+export type AdminMessageInput = v.InferOutput<typeof AdminMessageSchema>;
+
+export class AdminMessageInputParser {
+	parse(raw: unknown): Result<AdminMessageInput, Record<string, string>> {
+		const result = v.safeParse(AdminMessageSchema, raw);
+
+		return result.success
+			? { ok: true, value: result.output }
+			: { ok: false, error: fieldErrors(result.issues) };
+	}
+}

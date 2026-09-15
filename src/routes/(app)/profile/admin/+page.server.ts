@@ -1,6 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import { config } from '$lib/server/config';
 import {
+	adminMessageInput,
+	grantInput,
+	grants,
 	jobs,
 	planInput,
 	plans,
@@ -33,7 +36,7 @@ const RECONCILE_WINDOW_MS = 3_600_000;
  * touched. `id` is null for the two create forms and for reconcile, which has exactly one form.
  */
 interface Target {
-	kind: 'plan' | 'promo' | 'reconcile';
+	kind: 'plan' | 'promo' | 'reconcile' | 'grant' | 'message';
 	id: number | null;
 }
 
@@ -73,6 +76,8 @@ const ok = (target: Target, message: string): ActionResult => ({
 const plan = (id: number | null): Target => ({ kind: 'plan', id });
 const promo = (id: number | null): Target => ({ kind: 'promo', id });
 const reconcile = (): Target => ({ kind: 'reconcile', id: null });
+const grantTarget = (): Target => ({ kind: 'grant', id: null });
+const messageTarget = (): Target => ({ kind: 'message', id: null });
 
 /**
  * The guard in hooks.server.ts already 403s a signed-in non-admin, and the shell still renders for a
@@ -81,6 +86,8 @@ const reconcile = (): Target => ({ kind: 'reconcile', id: null });
  */
 export const load: PageServerLoad = async ({ locals }) => ({
 	plans: isAdmin(locals) ? plans.listEditable() : [],
+	// The grant form sells from the same list, so it needs the sellable subset the shop shows.
+	sellablePlans: isAdmin(locals) ? plans.listActive() : [],
 	/**
 	 * Gated for the same reason, and it matters more here than for plans: a live promo code is a
 	 * bearer secret — anybody holding one can spend it — so the list must never render for a request
@@ -364,6 +371,107 @@ export const actions = {
 	 * The Telegram id is the thing an admin can actually see (subscriptions/input.ts explains why),
 	 * and the subscription id the contract keys on is derived here.
 	 */
+	/**
+	 * Hands somebody a term of access after the owner took the money outside the app. The service
+	 * explains why it goes through an order (billing/grant-service.ts); this action only resolves the
+	 * form and phrases the two refusals.
+	 */
+	grant: async ({ request, locals }) => {
+		if (!isAdmin(locals)) return forbidden();
+
+		const values = formValues(await request.formData());
+		const parsed = grantInput.parse(values);
+
+		if (!parsed.ok) {
+			return fail(400, {
+				target: grantTarget(),
+				ok: false,
+				message: null,
+				errors: parsed.error,
+				values
+			} satisfies ActionResult);
+		}
+
+		const granted = grants.grant(parsed.value.telegramId, parsed.value.planId);
+
+		if (!granted.ok) {
+			const errors: Record<string, string> =
+				granted.error === 'user_not_found'
+					? { telegramId: 'Telegram ID: такого человека нет — пусть сначала откроет приложение' }
+					: { planId: 'Тариф: больше не продаётся' };
+
+			return fail(granted.error === 'user_not_found' ? 404 : 409, {
+				target: grantTarget(),
+				ok: false,
+				message: null,
+				errors,
+				values
+			} satisfies ActionResult);
+		}
+
+		log.info('admin_granted_access', {
+			requestId: locals.requestId,
+			orderId: granted.value.orderId
+		});
+
+		return ok(
+			grantTarget(),
+			`Выдали «${granted.value.planName}». Ключ придёт человеку в бот через несколько секунд.`
+		);
+	},
+
+	/**
+	 * Writes to somebody from the bot — the channel the owner sends payment details down.
+	 *
+	 * Through the queue rather than the Telegram client directly, for the reason every other outbound
+	 * message goes that way (tech.md 6): the admin must not wait on Bot API, and a send that fails
+	 * has a retry policy instead of becoming a failed form.
+	 */
+	sendMessage: async ({ request, locals }) => {
+		if (!isAdmin(locals)) return forbidden();
+
+		const values = formValues(await request.formData());
+		const parsed = adminMessageInput.parse(values);
+
+		if (!parsed.ok) {
+			return fail(400, {
+				target: messageTarget(),
+				ok: false,
+				message: null,
+				errors: parsed.error,
+				values
+			} satisfies ActionResult);
+		}
+
+		const person = users.findByTelegramId(parsed.value.telegramId);
+
+		if (!person) {
+			return fail(404, {
+				target: messageTarget(),
+				ok: false,
+				message: null,
+				errors: { telegramId: 'Telegram ID: такого человека нет' },
+				values
+			} satisfies ActionResult);
+		}
+
+		/**
+		 * Keyed on the moment, not on the text: the same details sent twice is a thing an owner does
+		 * on purpose, and a key derived from the message would silently swallow the second one.
+		 */
+		const dedupeKey = `admin_msg:${person.telegramId}:${Date.now()}`;
+		jobs.enqueue(
+			'telegram.send_message',
+			{ chatId: person.telegramId, text: parsed.value.text, dedupeKey },
+			`tg:${dedupeKey}`
+		);
+
+		// Ids only. What the owner wrote is one half of a private conversation (CLAUDE.md 2).
+		log.info('admin_message_queued', { requestId: locals.requestId, userId: person.id });
+
+		return ok(messageTarget(), 'Отправили. Сообщение придёт человеку в бот.');
+	},
+
 	reconcile: async ({ request, locals }) => {
 		if (!isAdmin(locals)) return forbidden();
 

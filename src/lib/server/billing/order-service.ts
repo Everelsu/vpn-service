@@ -9,7 +9,7 @@ export interface CreateOrderInput {
 	planId: number;
 	plan: PlanSnapshot;
 	quote: PriceQuote;
-	provider: 'stripe' | 'fake';
+	provider: 'stripe' | 'fake' | 'manual';
 	promoCodeId?: number | null;
 }
 

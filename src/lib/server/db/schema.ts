@@ -69,7 +69,10 @@ export const orders = sqliteTable(
 		finalPriceMinor: integer('final_price_minor').notNull(),
 		currency: text('currency').notNull(),
 		status: text('status', { enum: ['pending', 'paid', 'failed', 'canceled'] }).notNull(),
-		provider: text('provider', { enum: ['stripe', 'fake'] }).notNull(),
+		// 'manual' is an order the owner granted by hand after taking the money outside the app.
+		// It carries a real price because a real price was charged; what it does not carry is a
+		// provider session, because no provider was involved.
+		provider: text('provider', { enum: ['stripe', 'fake', 'manual'] }).notNull(),
 		publicId: text('public_id').notNull().unique(), // nanoid, goes to client_reference_id and metadata.orderId
 		providerSessionId: text('provider_session_id').unique(), // cs_…
 		providerPaymentIntentId: text('provider_payment_intent_id').unique(), // pi_…, payment idempotency anchor

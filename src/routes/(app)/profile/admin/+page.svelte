@@ -13,6 +13,8 @@
 	import { formatDays, formatTraffic } from '../../plan-value';
 	import PlanForm from './PlanForm.svelte';
 	import PromoForm from './PromoForm.svelte';
+	import GrantForm from './GrantForm.svelte';
+	import MessageForm from './MessageForm.svelte';
 	import ReconcileForm from './ReconcileForm.svelte';
 	import type { PageProps } from './$types';
 
@@ -46,8 +48,10 @@
 	 * are compared — plans and promo codes number themselves independently, so an answer about promo 3
 	 * must not surface under plan 3.
 	 */
-	const answerFor = (kind: 'plan' | 'promo' | 'reconcile', id: number | null) =>
-		form?.target.kind === kind && form.target.id === id ? form : null;
+	const answerFor = (
+		kind: 'plan' | 'promo' | 'reconcile' | 'grant' | 'message',
+		id: number | null
+	) => (form?.target.kind === kind && form.target.id === id ? form : null);
 
 	let listed = $derived(new Set(data.plans.map((plan) => plan.id)));
 	let listedPromos = $derived(new Set(data.promoCodes.map((promo) => promo.id)));
@@ -76,6 +80,8 @@
 
 	/** The reconcile section has one form, so its answer needs no id to be routed by. */
 	let reconcileAnswer = $derived(answerFor('reconcile', null));
+	let grantAnswer = $derived(answerFor('grant', null));
+	let messageAnswer = $derived(answerFor('message', null));
 
 	/** Red is for refusals. A confirmation in the error colour reads as a failure. */
 	const tone = (ok: boolean) => (ok ? 'text-muted' : 'text-danger');
@@ -459,6 +465,49 @@
 	<p class="mt-4 px-1 text-3xs text-muted">
 		Джоб попадает сюда, когда кончились попытки. Перезапуск из панели не предусмотрен — почините
 		причину и поставьте работу заново.
+	</p>
+
+	<!--
+		The two forms the shop is actually run from. They sit above the operational half because this
+		is the daily work now: somebody asks, the owner sends details, the money arrives somewhere
+		else, the owner hands over the term.
+	-->
+	<SectionHeading title="Выдать доступ" />
+
+	{#if grantAnswer?.message}
+		<p class={['mt-3 px-1 text-sm', tone(grantAnswer.ok)]}>{grantAnswer.message}</p>
+	{/if}
+
+	<div class="mt-3">
+		<Card>
+			<GrantForm
+				plans={data.sellablePlans}
+				errors={grantAnswer?.errors ?? {}}
+				values={grantAnswer?.values ?? {}}
+			/>
+		</Card>
+	</div>
+
+	<p class="mt-4 px-1 text-3xs text-muted">
+		Человек должен хотя бы раз открыть приложение — свой ID он видит у себя в профиле. Дни
+		прибавятся к текущей подписке, ключ придёт ему в бот.
+	</p>
+
+	<SectionHeading title="Написать человеку" />
+
+	{#if messageAnswer?.message}
+		<p class={['mt-3 px-1 text-sm', tone(messageAnswer.ok)]}>{messageAnswer.message}</p>
+	{/if}
+
+	<div class="mt-3">
+		<Card>
+			<MessageForm errors={messageAnswer?.errors ?? {}} values={messageAnswer?.values ?? {}} />
+		</Card>
+	</div>
+
+	<p class="mt-4 px-1 text-3xs text-muted">
+		Придёт обычным сообщением от бота. Ответ человека вернётся сюда же, в ваш чат — на него можно
+		отвечать свайпом.
 	</p>
 
 	<SectionHeading title="Сверка с Marzban" />

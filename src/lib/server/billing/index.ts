@@ -6,6 +6,7 @@ export {
 	type OrderServiceOptions
 } from './order-service';
 export { CheckoutService, type CheckoutError, type CheckoutStarted } from './checkout-service';
+export { ManualGrantService, type GrantError, type GrantResult } from './grant-service';
 export {
 	PaymentWebhookService,
 	type WebhookOutcome,
