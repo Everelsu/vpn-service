@@ -5,13 +5,18 @@
 	import CopyField from '$lib/ui/CopyField.svelte';
 	import QrCode from '$lib/ui/QrCode.svelte';
 	import SectionHeading from '$lib/ui/SectionHeading.svelte';
+	import { clientsFor, type ClientPlatform } from './vpn-clients';
 
 	interface Props {
 		/** The owner's subscription link. Absent means there is nothing to connect to yet. */
 		subscriptionUrl: string;
+		/** Decided on the server from the user agent, so the right buttons render on the first paint. */
+		platform: ClientPlatform;
 	}
 
-	let { subscriptionUrl }: Props = $props();
+	let { subscriptionUrl, platform }: Props = $props();
+
+	let clients = $derived(clientsFor(platform));
 
 	/**
 	 * The code is worth a third of the screen and is useless to the person already holding the phone
@@ -44,7 +49,32 @@
 <SectionHeading title="Подключение" />
 
 <Card>
-	<CopyField value={subscriptionUrl} label="Ссылка подписки" />
+	<!--
+		The one-tap path, above the link rather than below it: somebody who already has the app is one
+		button away from being online, and the link is the fallback for everybody else.
+
+		Plain anchors, not WebApp.openLink — that method is for http(s). A custom scheme has to reach
+		the WebView as a navigation for the OS to hand it to the app.
+	-->
+	<p class="text-2xs text-muted">Открыть в приложении</p>
+	<div class="mt-2.5 flex flex-wrap gap-2">
+		<!-- Not a route: resolve() is for paths inside this app, and every href below is a custom
+		     scheme the OS hands to another app entirely. -->
+		<!-- eslint-disable svelte/no-navigation-without-resolve -->
+		{#each clients as client (client.id)}
+			<a
+				href={client.link(subscriptionUrl)}
+				class="press rounded-plan border border-line bg-inset px-4 py-2.5 text-2xs font-medium"
+			>
+				{client.label}
+			</a>
+		{/each}
+		<!-- eslint-enable svelte/no-navigation-without-resolve -->
+	</div>
+
+	<div class="mt-4 border-t border-line pt-4">
+		<CopyField value={subscriptionUrl} label="Ссылка подписки" />
+	</div>
 
 	<button
 		type="button"

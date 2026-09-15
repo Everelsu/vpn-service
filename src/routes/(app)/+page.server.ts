@@ -4,6 +4,7 @@ import { access, checkout, checkoutInput, plans, promoLimiter, users } from '$li
 import { AppError, toHttp } from '$lib/server/errors';
 import { log } from '$lib/server/log';
 import { PROMO_MESSAGES, promoRateLimitMessage } from './promo-copy';
+import { platformOf } from './vpn-clients';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -12,7 +13,7 @@ import type { Actions, PageServerLoad } from './$types';
  * Plans are public, so this survives locals.user === null and renders the same list to a signed-out
  * shell (tech.md 9). Exactly one render lives in that state before the cookie lands.
  */
-export const load: PageServerLoad = async ({ locals, depends }) => {
+export const load: PageServerLoad = async ({ locals, depends, request }) => {
 	/**
 	 * The dependency A7 polls on. The client calls invalidate('app:subscription') every few seconds
 	 * while it waits for a payment to land, and this is what makes that call re-run this load
@@ -30,7 +31,15 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
 				awaitingKey: false
 			};
 
-	return { plans: plans.listActive(), ...view };
+	/**
+	 * Read here rather than from `navigator` in the component: the connect block picks which apps to
+	 * offer by platform, and deciding that after hydration would render the wrong buttons first and
+	 * swap them under the reader's thumb. The header is a hint, not a fact — an unrecognised one
+	 * falls back to the desktop list, which is the shortest and never the wrong thing to show.
+	 */
+	const platform = platformOf(request.headers.get('user-agent') ?? '');
+
+	return { plans: plans.listActive(), platform, ...view };
 };
 
 /** What the page gets back from a refused checkout. A success carries the link instead. */

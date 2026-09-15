@@ -219,7 +219,7 @@
 	     sell one, and a connection block with nothing in it would just be a second empty state. -->
 	{#if data.subscription && data.subscription.status === 'active'}
 		<div class="mt-7">
-			<ConnectCard subscriptionUrl={data.subscription.subscriptionUrl} />
+			<ConnectCard subscriptionUrl={data.subscription.subscriptionUrl} platform={data.platform} />
 		</div>
 	{/if}
 </div>
