@@ -86,42 +86,52 @@
  * would break under a light client theme.
  */
 @theme {
-	/* Neutral graphite stack. The steps are close together on purpose — depth here comes from the
-	   hairline border on every card, not from a big jump in lightness. */
-	--color-page: #1a1a1a;
-	--color-surface: #242424;
+	/**
+	 * Near-black stack, tuned for OLED. The shell is true black and every surface above it is a small
+	 * step up: on an OLED panel a black pixel is an unlit pixel, so the darkest step costs nothing and
+	 * the whole ramp can sit low without turning to mud. Depth still comes from the hairline border on
+	 * every card rather than from a big jump in lightness — the steps are only a few points apart.
+	 */
+	--color-page: #050506;
+	--color-surface: #101013;
 	/* One step above a card: avatars, and anything that must read as lifted off a card. */
-	--color-elevated: #2c2c2c;
+	--color-elevated: #1b1b20;
 	/* Rows nested inside a sheet — the tariff options sit on this. */
-	--color-inset: #262626;
+	--color-inset: #0c0d11;
 	/* A sheet slides over the page, so it sits between page and card to read as nearer. */
-	--color-sheet: #1f1f1f;
-	/* Outside the phone frame on desktop — below the page, so the frame reads as a lit object. */
-	--color-shell: #101010;
+	--color-sheet: #09090a;
+	/* Outside the phone frame on desktop — true black, so the frame reads as a lit object on it. */
+	--color-shell: #000000;
 
 	--color-ink: #ffffff;
-	--color-muted: rgb(255 255 255 / 0.6);
+	/**
+	 * Solid greys, not white at an opacity. Over a near-black page a translucent white lands in the
+	 * low teens and reads as smudge rather than text; these two are fixed values with a faint cool
+	 * cast, which keeps body copy legible and puts it in the same family as the accent.
+	 */
+	--color-muted: #b0bac5;
 	/* The faintest legible step. Inactive tabs and meta text, never a full sentence. */
-	--color-subtle: rgb(255 255 255 / 0.42);
+	--color-subtle: #96a2b0;
 
 	/* Borders are the structure of this design: a card is a card because of its hairline, so the two
-	   line steps get names rather than being spelled as white/8 in markup. */
-	--color-line: rgb(255 255 255 / 0.08);
-	--color-line-strong: rgb(255 255 255 / 0.1);
+	   line steps get names rather than being spelled as white/8 in markup. The tint matches the text
+	   greys — a pure white hairline reads blue-cold against these surfaces. */
+	--color-line: rgb(193 190 209 / 0.1);
+	--color-line-strong: rgb(193 190 209 / 0.16);
 
 	/**
-	 * One accent, #B6CAEB, and one alias for what sits on top of it. It is a LIGHT colour on a dark
+	 * One accent, #C78AFF, and one alias for what sits on top of it. It is a LIGHT colour on a dark
 	 * page, so anything filled with it takes `text-on-accent`, never white. There is no ramp: every
 	 * softer shade in the design is this same hue at an opacity (`bg-accent/15`, `border-accent/28`),
 	 * which keeps one hue on screen instead of five hand-picked neighbours that drift apart.
 	 */
-	--color-accent: #b6caeb;
-	--color-on-accent: #141414;
+	--color-accent: #c78aff;
+	--color-on-accent: #0a0512;
 
 	/* State colours. The mock-up has no error screen, so these extend it: same recipe as the accent —
 	   a light hue for text, the same hue at low opacity for a fill. */
-	--color-danger: #ff7a8a;
-	--color-warn: #ffd166;
+	--color-danger: #ff496e;
+	--color-warn: #ffa347;
 
 	--radius-control: 14px;
 	--radius-field: 16px;
@@ -248,11 +258,13 @@
 	/* The travelling pill is absolute against this rail. Without it the pill escapes to the <nav>,
 	   which spans the whole width, and parks itself off the left edge of the bar. */
 	position: relative;
-	background: rgb(36 36 36 / 0.92);
+	background: rgb(16 16 19 / 0.9);
 	backdrop-filter: blur(14px);
 	-webkit-backdrop-filter: blur(14px);
-	border: 1px solid rgb(255 255 255 / 0.09);
-	box-shadow: 0 22px 44px -20px rgb(0 0 0 / 0.85);
+	border: 1px solid rgb(193 190 209 / 0.14);
+	/* The page under it is true black, so the drop shadow does nothing. What separates the bar from
+	   the page is the hairline and a faint lift of its own fill. */
+	box-shadow: 0 22px 44px -20px rgb(0 0 0 / 0.95);
 }
 
 /* Old Android WebViews ignore backdrop-filter; glass is decoration, readability must not depend on it. */
@@ -263,7 +275,7 @@
 }
 
 @utility toast-surface {
-	background: rgb(44 44 44 / 0.94);
+	background: rgb(27 27 32 / 0.94);
 	backdrop-filter: blur(16px);
 	-webkit-backdrop-filter: blur(16px);
 	border: 1px solid var(--color-line-strong);

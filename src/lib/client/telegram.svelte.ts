@@ -3,8 +3,13 @@ import type { SessionUser } from '$lib/types';
 import { toasts } from '$lib/ui/toasts.svelte';
 import { webApp } from './telegram-webapp';
 
-/** Page background pushed to the Telegram chrome so the app and the client agree (app.css --color-page). */
-const PAGE_COLOR = '#101828';
+/**
+ * Page background pushed to the Telegram chrome so the app and the client agree. It must stay equal
+ * to --color-page in app.css: the Telegram API takes a literal string, not a CSS variable, so this
+ * is the one value in the app that is copied rather than referenced. A mismatch shows up as a seam
+ * between the client's header and the first pixel of the page.
+ */
+const PAGE_COLOR = '#050506';
 
 const AUTH_ENDPOINT = '/api/auth/telegram';
 

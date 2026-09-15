@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="VPN">
+	<title>VPN</title>
+	<!--
+		A shield for the product and a crescent for the palette it lives in: one mark, two paths, no
+		gradient. It is drawn to survive a 16px favicon, so the crescent is a third of the shield and
+		the gap between them never closes, which a thinner glyph would do at that size.
+
+		The two colours are the theme tokens spelled literally, because a favicon is fetched outside
+		the document and inherits no CSS: #0a0512 is the on-accent token, #c78aff the accent.
+		Note for anyone editing this comment: XML forbids a double hyphen inside one, so the tokens
+		cannot be written here with their CSS prefix.
+	-->
+	<rect width="48" height="48" rx="11" fill="#0a0512" />
+	<path
+		d="M24 8.5 L36 12.8 V24.5 C36 32.4 30.8 37.9 24 40.2 C17.2 37.9 12 32.4 12 24.5 V12.8 Z"
+		fill="#c78aff"
+	/>
+	<path
+		d="M26.8 15.6 A7.6 7.6 0 1 0 26.8 30.4 A8 8 0 0 1 26.8 15.6 Z"
+		fill="#0a0512"
+		transform="translate(1.9 0)"
+	/>
+</svg>
