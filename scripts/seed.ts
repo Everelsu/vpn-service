@@ -103,11 +103,12 @@ const FAQ = [
 	},
 	{
 		question: 'Можно вернуть деньги?',
-		// Deliberately routed to support rather than stated as a policy with a deadline in it: the
-		// terms are the owner's to set, and a number written here would be a promise the app makes on
-		// their behalf every time the seed runs.
+		// The honest answer, because the service does not issue refunds. Saying otherwise here is
+		// worse than saying nothing: somebody reads it, buys on the strength of it, and finds out at
+		// the one moment they are already unhappy. What the answer offers instead is the thing that
+		// actually happens — help until it works, and a short plan to try before paying for a long one.
 		answer:
-			'Да. Напишите в поддержку — разберёмся и вернём. Если подключиться так и не вышло, вернём полностью.'
+			'Нет, оплата не возвращается: доступ открывается сразу после оплаты. Если что-то не работает — напишите в поддержку, разберёмся и доведём до рабочего состояния. А чтобы проверить сервис, начните с недельного тарифа.'
 	}
 ];
 
