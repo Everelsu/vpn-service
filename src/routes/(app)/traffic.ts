@@ -25,3 +25,13 @@ export function trafficUsageRatio(usedBytes: number | null, limitBytes: number):
 	if (usedBytes === null || limitBytes === 0) return null;
 	return Math.min(1, Math.max(0, usedBytes / limitBytes));
 }
+
+/**
+ * The same fact sized for a stat tile, where the column is half the screen and a sentence truncates.
+ * `Использовано 0 ГБ · безлимит` is the right line under a plan card and the wrong one in a grid —
+ * it came out as «Безлимитный т…», which says nothing at all.
+ */
+export function formatTrafficCompact(usedBytes: number | null, limitBytes: number): string {
+	if (usedBytes !== null) return `${gibFromBytes(usedBytes)} ГБ`;
+	return limitBytes === 0 ? 'Безлимит' : `Лимит ${gibFromBytes(limitBytes)} ГБ`;
+}

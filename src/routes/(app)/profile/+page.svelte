@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, untrack } from 'svelte';
-	import { LoaderCircle, SlidersHorizontal } from 'lucide-svelte';
+	import { SlidersHorizontal } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { checkoutWatcher } from '$lib/client/checkout.svelte';
@@ -8,16 +8,14 @@
 	import { TELEGRAM_SESSION_KEY, type TelegramSession } from '$lib/client/telegram.svelte';
 	import Avatar from '$lib/ui/Avatar.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import Card from '$lib/ui/Card.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import SectionHeading from '$lib/ui/SectionHeading.svelte';
-	import PromoBlock from './PromoBlock.svelte';
+	import ProfileStats from './ProfileStats.svelte';
 	import PurchaseHistory from './PurchaseHistory.svelte';
-	import SubscriptionCard from './SubscriptionCard.svelte';
 	import type { PageProps } from './$types';
 
-	let { data, form }: PageProps = $props();
+	let { data }: PageProps = $props();
 
 	const session = getContext<TelegramSession>(TELEGRAM_SESSION_KEY);
 
@@ -62,8 +60,6 @@
 			if (checkoutWatcher.phase === 'idle') checkoutWatcher.start();
 		});
 	});
-
-	let waitingPhase = $derived(checkoutWatcher.phase);
 
 	function choosePlan() {
 		haptic();
@@ -113,52 +109,29 @@
 		{/if}
 	</div>
 
-	{#if user}
-		<PromoBlock result={form} currency={data.currency} />
-	{/if}
+	<div class="mt-7">
+		<ProfileStats
+			subscription={data.subscription}
+			plan={data.plan}
+			trafficUsedBytes={data.trafficUsedBytes}
+			history={data.history}
+			currency={data.currency}
+		/>
+	</div>
 
-	<SectionHeading title="Подписка" />
-
-	{#if data.subscription}
-		<SubscriptionCard subscription={data.subscription} onrenew={choosePlan} />
-	{:else if data.awaitingKey}
-		<!--
-			Paid, and the provision job has not finished. The empty state below must never appear
-			here: inviting somebody to buy the thing they just bought is the worst sentence this
-			screen could say.
-		-->
-		<Card>
-			<div class="flex items-start gap-3">
-				{#if waitingPhase !== 'timeout'}
-					<span class="spinner mt-0.5 block shrink-0 animate-spin text-accent">
-						<LoaderCircle size={18} aria-hidden="true" />
-					</span>
-				{/if}
-				<div class="min-w-0" role="status" aria-live="polite">
-					<p class="text-md font-bold">Оплата прошла</p>
-					<p class="mt-2 text-2xs text-muted">
-						{#if waitingPhase === 'timeout'}
-							<!-- The provision job retries with a backoff that can outlast our minute. A
-							     spinner still turning after that would promise something we cannot time. -->
-							Ключ готовится дольше обычного. Пришлём его вам в Telegram, как только он будет готов.
-						{:else}
-							Готовим ключ. Он появится здесь и придёт вам в Telegram.
-						{/if}
-					</p>
-				</div>
-			</div>
-		</Card>
-	{:else}
-		<EmptyState
-			title="Подписки нет"
-			description={user
-				? 'Выберите тариф — ключ придёт сюда сразу после оплаты.'
-				: 'Откройте приложение из Telegram и выберите тариф.'}
-		>
-			{#snippet action()}
-				<Button size="sm" class="w-full" onclick={choosePlan}>Выбрать тариф</Button>
-			{/snippet}
-		</EmptyState>
+	{#if !data.subscription}
+		<div class="mt-3">
+			<EmptyState
+				title="Подписки нет"
+				description={user
+					? 'Выберите тариф — ключ придёт сразу после оплаты.'
+					: 'Откройте приложение из Telegram и выберите тариф.'}
+			>
+				{#snippet action()}
+					<Button size="sm" class="w-full" onclick={choosePlan}>Выбрать тариф</Button>
+				{/snippet}
+			</EmptyState>
+		</div>
 	{/if}
 
 	{#if data.history.length > 0}
@@ -172,11 +145,3 @@
 		<PurchaseHistory orders={data.history} />
 	{/if}
 </div>
-
-<style>
-	@media (prefers-reduced-motion: reduce) {
-		.spinner {
-			animation-duration: 1.6s;
-		}
-	}
-</style>

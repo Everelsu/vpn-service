@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatTrafficUsage, trafficUsageRatio } from './traffic';
+import { formatTrafficCompact, formatTrafficUsage, trafficUsageRatio } from './traffic';
 
 const GIB = 1024 ** 3;
 
@@ -36,5 +36,17 @@ describe('trafficUsageRatio', () => {
 
 	it('clamps at 1 when usage has run past the limit', () => {
 		expect(trafficUsageRatio(80 * GIB, 50 * GIB)).toBe(1);
+	});
+});
+
+describe('formatTrafficCompact', () => {
+	it('says the number when Marzban answered', () => {
+		expect(formatTrafficCompact(3 * GIB, 0)).toBe('3 ГБ');
+		expect(formatTrafficCompact(3 * GIB, 10 * GIB)).toBe('3 ГБ');
+	});
+
+	it('falls back to the promise when it did not', () => {
+		expect(formatTrafficCompact(null, 0)).toBe('Безлимит');
+		expect(formatTrafficCompact(null, 10 * GIB)).toBe('Лимит 10 ГБ');
 	});
 });
