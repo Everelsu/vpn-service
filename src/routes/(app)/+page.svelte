@@ -16,6 +16,7 @@
 	import Sheet from '$lib/ui/Sheet.svelte';
 	import { toasts } from '$lib/ui/toasts.svelte';
 	import CheckoutStatus from './CheckoutStatus.svelte';
+	import ConnectCard from './ConnectCard.svelte';
 	import CurrentPlanCard from './CurrentPlanCard.svelte';
 	import { formatDateShort } from './dates';
 	import FeaturePills from './FeaturePills.svelte';
@@ -197,6 +198,14 @@
 		onsetup={openSetup}
 		onpromo={openPromo}
 	/>
+
+	<!-- Only while there is something to connect to. Without a subscription the screen's job is to
+	     sell one, and a connection block with nothing in it would just be a second empty state. -->
+	{#if data.subscription && data.subscription.status === 'active'}
+		<div class="mt-7">
+			<ConnectCard subscriptionUrl={data.subscription.subscriptionUrl} />
+		</div>
+	{/if}
 </div>
 
 <Sheet
