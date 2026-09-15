@@ -121,7 +121,11 @@ services:
       # one of them.
       ACME_CA: ${ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Which site config caddy serves. The default is the full stack — app host plus /sub/*.
+      # A VPN-only deploy sets CADDYFILE=./Caddyfile.vpn-only, which drops the app host: caddy
+      # would otherwise ask ACME for a certificate for a hostname with no DNS behind it and fail
+      # every authorisation until the rate limit stops it.
+      - ${CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro
       # Certificates and ACME account keys. Without these volumes every restart re-issues from
       # Let's Encrypt and walks straight into the rate limit.
       - caddy-data:/data

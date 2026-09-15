@@ -1,0 +1,65 @@
+# The VPN half on its own: one host, serving only Marzban's /sub/*.
+#
+# Use it when the mini app is not deployed at all (deploy.md, «Только VPN»). Point compose at it with
+# CADDYFILE=./Caddyfile.vpn-only — the app block in the full Caddyfile would otherwise make caddy
+# request a certificate for a hostname with no DNS record behind it, fail every ACME authorisation
+# and walk into Let's Encrypt's rate limit.
+#
+# It is a second file rather than an edit to the first because the full stack is still in this
+# repository and still deployable. Deleting the app block would leave the runbook describing a
+# deployment the config no longer supports.
+#
+# READ BEFORE HARDENING. Unlike the full file there is no mini app here, so X-Frame-Options and CSP
+# would break nothing — but there is also nothing to protect: this host serves one path to VPN
+# clients, which are not browsers. Left out rather than cargo-culted across.
+#
+# HSTS belongs HERE rather than anywhere behind it: caddy terminates TLS, so it is the only party
+# that knows the connection was HTTPS at all.
+
+{
+	# ACME notifications and expiry warnings.
+	email {$ACME_EMAIL}
+
+	# Point ACME_CA at Let's Encrypt staging while DNS is still propagating — the production endpoint
+	# rate-limits failed authorisations, and a domain whose A record is not live yet fails every one.
+	acme_ca {$ACME_CA}
+}
+
+{$SUB_DOMAIN} {
+	# One year, subdomains included. The host is HTTPS-only and caddy already redirects :80, but the
+	# redirect is one plaintext round trip a network can intercept; HSTS removes it after the first
+	# visit. `preload` is deliberately NOT set: it is a one-way door submitted out of band.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	encode zstd gzip
+
+	# Clients need their subscription link and nothing else. The panel, /api and /dashboard stay on
+	# the docker network, reachable only through an SSH tunnel (tech.md 3, tech.md 9). Marzban builds
+	# these URLs from XRAY_SUBSCRIPTION_URL_PREFIX, so the path stays /sub/* end to end.
+	#
+	# The wildcard covers the whole family Marzban serves under that prefix — /sub/{token},
+	# /sub/{token}/info and the per-client variants a VPN app fetches when it auto-updates.
+	handle /sub/* {
+		reverse_proxy marzban:8000
+	}
+
+	# Everything else on this host. `abort` drops the connection without confirming that a panel is
+	# behind it; a 404 page would advertise it.
+	handle {
+		abort
+	}
+
+	# The subscription token IS the credential: anyone holding the URL gets the VLESS keys, and it is
+	# stable for the life of the subscription. A default access log would write it to disk on every
+	# fetch — and a VPN client refetches on a schedule — leaving a file full of live credentials
+	# readable by anyone who can run `docker compose logs`. Hashing keeps the log useful for status
+	# codes and traffic shape while making the token unrecoverable from it.
+	log {
+		format filter {
+			wrap console
+			fields {
+				request>uri hash
+			}
+		}
+	}
+}
