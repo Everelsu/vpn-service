@@ -170,6 +170,28 @@ export class OrderService {
 	}
 
 	/**
+	 * The same list with the states that are not purchases left out: a receipt list has to be a list
+	 * of receipts. `pending` is a payment page somebody opened and may still be looking at, and
+	 * `canceled` is one they walked away from — neither is a thing that happened, and leaving them in
+	 * made «История покупок» disagree with the purchase count standing beside it.
+	 *
+	 * `failed` stays. Money was attempted and did not land, which is precisely what somebody comes to
+	 * this list to check.
+	 *
+	 * Filtered in the query rather than after `limit`, or a run of abandoned attempts would eat the
+	 * page and leave the real receipts below it invisible.
+	 */
+	listPurchasesForUser(userId: number, limit: number): OrderRow[] {
+		return this.db
+			.select()
+			.from(orders)
+			.where(and(eq(orders.userId, userId), inArray(orders.status, ['paid', 'failed'])))
+			.orderBy(desc(orders.createdAt), desc(orders.id))
+			.limit(limit)
+			.all();
+	}
+
+	/**
 	 * This person's orders quoted with `promoCodeId` that have not been settled against them yet:
 	 * still awaiting payment, or paid and not yet provisioned.
 	 *

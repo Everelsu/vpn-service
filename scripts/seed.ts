@@ -70,13 +70,17 @@ const PROMOS = [
 	{ code: 'FRIEND10', discountType: 'percent' as const, discountValue: 10, maxUses: 500 }
 ];
 
-// Copy mirrors vpn-miniapp.html. The device-count claim from the mock is dropped on purpose:
-// tech.md 17.4 states Marzban gives no device limit, so promising one would be a lie.
+// The device-count claim from the mock is dropped on purpose: tech.md 17.4 states Marzban gives no
+// device limit, so promising one would be a lie.
+//
+// These answers describe what the app actually does, and that is the only rule they follow. Two of
+// them had drifted: one sent people to V2Box and Hiddify while the connect block and the setup page
+// both lead with Happ, and one told them to switch location on a service that sells a single one.
 const FAQ = [
 	{
 		question: 'Как подключиться после оплаты?',
 		answer:
-			'Ключ появится в профиле сразу после оплаты. Установите V2Box на iOS или Hiddify на Android, импортируйте ссылку или отсканируйте QR-код.'
+			'Ключ появится на главной сразу после оплаты. Установите Happ, нажмите «Открыть в приложении» — подписка добавится сама. Можно и вручную: скопировать ссылку или отсканировать QR-код.'
 	},
 	{
 		question: 'На скольких устройствах работает ключ?',
@@ -86,7 +90,7 @@ const FAQ = [
 	{
 		question: 'VPN не подключается',
 		answer:
-			'Обновите подписку в приложении и выберите другую локацию. Если не помогло — проверьте срок тарифа в профиле и напишите нам.'
+			'Обновите подписку в клиенте — он перечитает ссылку и подтянет свежие настройки. Если не помогло, проверьте срок в профиле и напишите нам: ответим здесь же, в боте.'
 	},
 	{
 		question: 'Как продлить тариф?',
@@ -99,7 +103,11 @@ const FAQ = [
 	},
 	{
 		question: 'Можно вернуть деньги?',
-		answer: 'Да, в течение 24 часов после оплаты, если подключиться не удалось.'
+		// Deliberately routed to support rather than stated as a policy with a deadline in it: the
+		// terms are the owner's to set, and a number written here would be a promise the app makes on
+		// their behalf every time the seed runs.
+		answer:
+			'Да. Напишите в поддержку — разберёмся и вернём. Если подключиться так и не вышло, вернём полностью.'
 	}
 ];
 

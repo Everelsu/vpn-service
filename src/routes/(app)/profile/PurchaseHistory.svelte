@@ -16,6 +16,10 @@
 	 * Statuses come from $lib/types, never as literals in markup (CLAUDE.md 4). A paid order is the
 	 * ordinary case and says nothing: a badge on every row would be noise, and the date already tells
 	 * the person it went through.
+	 *
+	 * Only `paid` and `failed` reach this list — the reader leaves out the two states that are not
+	 * purchases (order-service.ts, listPurchasesForUser). The other arms stay so the record is still
+	 * exhaustive: a new status then fails to compile here instead of rendering as a blank badge.
 	 */
 	const LABELS: Record<Exclude<OrderStatus, 'paid'>, { text: string; tone: 'warn' | 'neutral' }> = {
 		pending: { text: 'Ждём оплату', tone: 'warn' },

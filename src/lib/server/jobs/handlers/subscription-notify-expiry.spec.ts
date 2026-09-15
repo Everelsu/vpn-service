@@ -20,6 +20,8 @@ import { TelegramSendMessageHandler } from './telegram-send-message';
 
 const NOW = 1_784_000_000_000;
 const ADMIN_CHAT_ID = 900_000_001;
+/** Stands in for RETURN_DEEPLINK: the message carries it, so the tests can assert on it. */
+const RENEW_URL = 'https://t.me/vpn_test_bot/app';
 
 let db: Db;
 let clock: TestClock;
@@ -65,7 +67,7 @@ beforeEach(() => {
 		new PlanService(db, 'usd'),
 		queue,
 		silentLogger(),
-		{ now: clock.now }
+		{ now: clock.now, renewUrl: RENEW_URL }
 	);
 });
 
@@ -80,6 +82,14 @@ describe('SubscriptionNotifyExpiryHandler', () => {
 		expect(sent.chatId).toBe(owner.telegramId);
 		expect(sent.text).toContain('30 дней');
 		expect(sent.text).toContain('через 3 дня');
+		/**
+		 * The link is the point of the notice, not decoration. «Продлите её в приложении» with no way
+		 * to reach the app asks somebody to go and find it themselves, three days before their
+		 * internet stops — so the url is part of the acceptance criteria, and it goes on its own line
+		 * because Telegram only makes a bare one tappable.
+		 */
+		expect(sent.text).toContain(`
+${RENEW_URL}`);
 	});
 
 	/** Russian makes the noun agree with the number; one mark says "дня", the other says "день". */

@@ -70,7 +70,7 @@ export class SubscriptionReader {
 	 * spread away from serialising both to a phone.
 	 */
 	historyFor(userId: number, limit = HISTORY_LIMIT): OrderDTO[] {
-		return this.orders.listForUser(userId, limit).map(toOrderDTO);
+		return this.orders.listPurchasesForUser(userId, limit).map(toOrderDTO);
 	}
 
 	forUser(userId: number): AccessView {

@@ -250,6 +250,8 @@ describe('SubscriptionReader.historyFor', () => {
 			quote: new PriceCalculator().quote(snapshot(7), null),
 			provider: 'fake'
 		});
+		// Settled, or it would not reach the list at all — an open payment page is not a purchase.
+		orders.settle(theirs.id, 'failed');
 
 		expect(reader.historyFor(user.id).map((order) => order.id)).not.toContain(theirs.id);
 		expect(reader.historyFor(stranger.id).map((order) => order.id)).toEqual([theirs.id]);
@@ -274,8 +276,30 @@ describe('SubscriptionReader.historyFor', () => {
 		expect(reader.historyFor(user.id, 2)).toHaveLength(2);
 	});
 
-	it('keeps unpaid attempts in the list, so a failed purchase is not silently forgotten', () => {
-		const abandoned = orders.create({
+	it('keeps a failed payment, so money that did not land is not silently forgotten', () => {
+		const attempt = orders.create({
+			userId: user.id,
+			planId: plan.id,
+			plan: snapshot(30),
+			quote: new PriceCalculator().quote(snapshot(30), null),
+			provider: 'fake'
+		});
+		orders.settle(attempt.id, 'failed');
+
+		const listed = reader.historyFor(user.id);
+
+		expect(listed.map((order) => order.id)).toEqual([attempt.id]);
+		expect(listed[0].status).toBe('failed');
+		expect(listed[0].paidAt).toBeNull();
+	});
+
+	/**
+	 * A receipt list has to be a list of receipts. An open payment page and one somebody walked away
+	 * from are not things that happened, and leaving them in made the list disagree with the purchase
+	 * count standing next to it on the same screen.
+	 */
+	it('leaves out an attempt still sitting on a payment page', () => {
+		orders.create({
 			userId: user.id,
 			planId: plan.id,
 			plan: snapshot(30),
@@ -283,10 +307,37 @@ describe('SubscriptionReader.historyFor', () => {
 			provider: 'fake'
 		});
 
-		const listed = reader.historyFor(user.id);
+		expect(reader.historyFor(user.id)).toEqual([]);
+	});
 
-		expect(listed.map((order) => order.id)).toEqual([abandoned.id]);
-		expect(listed[0].status).toBe('pending');
-		expect(listed[0].paidAt).toBeNull();
+	it('leaves out an attempt that was cancelled', () => {
+		const abandoned = orders.create({
+			userId: user.id,
+			planId: plan.id,
+			plan: snapshot(30),
+			quote: new PriceCalculator().quote(snapshot(30), null),
+			provider: 'fake'
+		});
+		orders.settle(abandoned.id, 'canceled');
+
+		expect(reader.historyFor(user.id)).toEqual([]);
+	});
+
+	it('does not let abandoned attempts push real receipts off the page', () => {
+		// The filter belongs in the query for exactly this reason: filtering after the limit would
+		// spend the whole page on attempts and leave the receipt below them invisible.
+		const receipt = pay(30);
+		for (let i = 0; i < 5; i += 1) {
+			clock.advance(DAY_MS);
+			orders.create({
+				userId: user.id,
+				planId: plan.id,
+				plan: snapshot(7),
+				quote: new PriceCalculator().quote(snapshot(7), null),
+				provider: 'fake'
+			});
+		}
+
+		expect(reader.historyFor(user.id, 3).map((order) => order.id)).toEqual([receipt.id]);
 	});
 });

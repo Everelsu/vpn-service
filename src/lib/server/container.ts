@@ -184,7 +184,9 @@ const worker = new JobWorker(
 		}),
 		// A15 — the sweep closes lapsed terms; the notice it schedules is a second, retryable job.
 		new SubscriptionSweepHandler(subscriptions, jobs, log),
-		new SubscriptionNotifyExpiryHandler(subscriptions, users, plans, jobs, log),
+		new SubscriptionNotifyExpiryHandler(subscriptions, users, plans, jobs, log, {
+			renewUrl: config.RETURN_DEEPLINK
+		}),
 		// A16 — run by hand from the panel, never on a timer: the local row is the leading side.
 		new MarzbanReconcileHandler(subscriptions, marzban, log)
 	],

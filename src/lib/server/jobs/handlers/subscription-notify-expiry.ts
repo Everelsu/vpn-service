@@ -14,6 +14,12 @@ const PayloadSchema = v.object({
 
 export interface SubscriptionNotifyExpiryOptions {
 	now?: () => number;
+	/**
+	 * Where «продлите» actually happens — RETURN_DEEPLINK, handed in rather than imported. A domain
+	 * handler that reached for the config singleton could not be constructed in a test without one
+	 * (CLAUDE.md 3), and this one is constructed in four.
+	 */
+	renewUrl: string;
 }
 
 /**
@@ -58,6 +64,7 @@ export class SubscriptionNotifyExpiryHandler extends JobHandler<'subscription.no
 	readonly schema = PayloadSchema;
 
 	private readonly now: () => number;
+	private readonly renewUrl: string;
 
 	constructor(
 		private readonly subscriptions: SubscriptionService,
@@ -65,10 +72,11 @@ export class SubscriptionNotifyExpiryHandler extends JobHandler<'subscription.no
 		private readonly plans: PlanService,
 		private readonly jobs: JobQueue,
 		private readonly log: Logger,
-		opts: SubscriptionNotifyExpiryOptions = {}
+		opts: SubscriptionNotifyExpiryOptions
 	) {
 		super();
 		this.now = opts.now ?? Date.now;
+		this.renewUrl = opts.renewUrl;
 	}
 
 	async handle(payload: v.InferOutput<typeof PayloadSchema>): Promise<void> {
@@ -148,7 +156,11 @@ export class SubscriptionNotifyExpiryHandler extends JobHandler<'subscription.no
 	#compose(planName: string, days: 3 | 1, expiresAtMs: number): string {
 		return (
 			`Подписка «${planName}» заканчивается через ${days} ${DAY_WORD[days]}, ${DATE.format(new Date(expiresAtMs))}. ` +
-			`Продлите её в приложении, чтобы доступ не прервался.`
+			`Продлите её, чтобы доступ не прервался:\n` +
+			// The link on its own line, and it is the point of the message: "renew it in the app" with
+			// no way to get there asks somebody to go and find the app themselves, three days before
+			// their internet stops. Telegram makes a bare url tappable without parse_mode.
+			this.renewUrl
 		);
 	}
 }

@@ -14,6 +14,9 @@ import { JobQueue } from './queue';
 import { JobScheduler, SWEEP_WINDOW_MS } from './scheduler';
 import { JobWorker } from './worker';
 
+/** Stands in for RETURN_DEEPLINK: the message carries it, so the tests can assert on it. */
+const RENEW_URL = 'https://t.me/vpn_test_bot/app';
+
 /**
  * A15 end to end, across the seam rather than inside one class (tech.md 14 — a contract test at the
  * joint of the slice): the scheduler offers a window, the worker drains it, and a person who is
@@ -74,7 +77,7 @@ beforeEach(() => {
 				new PlanService(db, 'usd'),
 				queue,
 				silentLogger(),
-				{ now: clock.now }
+				{ now: clock.now, renewUrl: RENEW_URL }
 			),
 			new TelegramSendMessageHandler(telegram, silentLogger())
 		],
