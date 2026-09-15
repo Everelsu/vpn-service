@@ -1,4 +1,11 @@
-import type { PlanSnapshot, PromoCodeDTO, PromoError, Result } from '$lib/types';
+import type {
+	PlanDTO,
+	PlanSnapshot,
+	PriceQuote,
+	PromoCodeDTO,
+	PromoError,
+	Result
+} from '$lib/types';
 import type { UserRow } from '../db/schema';
 import type { PaymentProvider } from '../clients/payments';
 import type { Logger } from '../log';
@@ -41,6 +48,23 @@ export class CheckoutService {
 	) {}
 
 	/**
+	 * What this checkout would charge, worked out without creating an order.
+	 *
+	 * The buy sheet asks for it while somebody types a code, so the price they read before paying is
+	 * the price the server will use: same calculator, same rows, same refusals. Computing it in the
+	 * page instead would put a second pricing rule in the client — the one thing CLAUDE.md 2 forbids
+	 * outright — and the two would drift the first time a rule changed on one side only.
+	 */
+	previewPrice(
+		user: UserRow,
+		planId: number,
+		promoCode?: string
+	): Result<PriceQuote, CheckoutError> {
+		const priced = this.price(user, planId, promoCode);
+		return priced.ok ? { ok: true, value: priced.value.quote } : priced;
+	}
+
+	/**
 	 * `promoCode` is a name, not a discount. What it is worth is read from the row it names and
 	 * checked against this person's history — the form has no way to say how much anything costs.
 	 */
@@ -49,33 +73,10 @@ export class CheckoutService {
 		planId: number,
 		promoCode?: string
 	): Promise<Result<CheckoutStarted, CheckoutError>> {
-		const plan = this.plans.findSellable(planId);
-		if (!plan) return { ok: false, error: 'plan_unavailable' };
+		const priced = this.price(user, planId, promoCode);
+		if (!priced.ok) return priced;
 
-		const snapshot: PlanSnapshot = {
-			name: plan.name,
-			durationDays: plan.durationDays,
-			priceMinor: plan.priceMinor,
-			currency: plan.currency,
-			trafficLimitBytes: plan.trafficLimitBytes
-		};
-
-		let promo: PromoCodeDTO | null = null;
-
-		if (promoCode) {
-			const resolved = this.promos.resolve(promoCode, user.id);
-
-			/**
-			 * A refused code stops the purchase instead of quietly selling at full price. Somebody who
-			 * typed a code is buying because of it: charging them the undiscounted amount and letting
-			 * them find out on the payment page is the one outcome here that costs their trust.
-			 */
-			if (!resolved.ok) return { ok: false, error: `promo_${resolved.error}` };
-
-			promo = resolved.value;
-		}
-
-		const quote = this.prices.quote(snapshot, promo);
+		const { plan, snapshot, promo, quote } = priced.value;
 
 		const order = this.orders.create({
 			userId: user.id,
@@ -117,5 +118,50 @@ export class CheckoutService {
 		});
 
 		return { ok: true, value: { url: checkout.url, orderId: order.id } };
+	}
+
+	/**
+	 * The shared half of pricing: find the plan, resolve the code against this person's history, and
+	 * quote. `start` and `previewPrice` both go through it so a preview can never disagree with the
+	 * order that follows it — two copies of this would be two pricing rules.
+	 */
+	private price(
+		user: UserRow,
+		planId: number,
+		promoCode?: string
+	): Result<
+		{ plan: PlanDTO; snapshot: PlanSnapshot; promo: PromoCodeDTO | null; quote: PriceQuote },
+		CheckoutError
+	> {
+		const plan = this.plans.findSellable(planId);
+		if (!plan) return { ok: false, error: 'plan_unavailable' };
+
+		const snapshot: PlanSnapshot = {
+			name: plan.name,
+			durationDays: plan.durationDays,
+			priceMinor: plan.priceMinor,
+			currency: plan.currency,
+			trafficLimitBytes: plan.trafficLimitBytes
+		};
+
+		let promo: PromoCodeDTO | null = null;
+
+		if (promoCode) {
+			const resolved = this.promos.resolve(promoCode, user.id);
+
+			/**
+			 * A refused code stops the purchase instead of quietly selling at full price. Somebody who
+			 * typed a code is buying because of it: charging them the undiscounted amount and letting
+			 * them find out on the payment page is the one outcome here that costs their trust.
+			 */
+			if (!resolved.ok) return { ok: false, error: `promo_${resolved.error}` };
+
+			promo = resolved.value;
+		}
+
+		return {
+			ok: true,
+			value: { plan, snapshot, promo, quote: this.prices.quote(snapshot, promo) }
+		};
 	}
 }

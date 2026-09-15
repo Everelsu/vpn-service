@@ -38,6 +38,14 @@ interface CheckoutFailure {
 	message: string;
 }
 
+/** Same shape, its own name: the sheet renders a refused quote next to the plans, not as a banner. */
+interface QuoteFailure {
+	message: string;
+}
+
+/** Both money actions answer an anonymous caller with the same sentence. */
+const PLEASE_SIGN_IN = 'Откройте приложение из Telegram, чтобы оплатить.';
+
 /**
  * Every refusal the domain can hand back, and what each one is worth in HTTP and in Russian.
  *
@@ -70,6 +78,53 @@ const isGuess = (error: CheckoutError) => isPromoRefusal(error) && error !== 'pr
 
 export const actions = {
 	/**
+	 * The price the buy sheet shows while somebody types a code. Same plan, same code, same
+	 * calculator as `createCheckout` — it calls one method on the same service, so the number here
+	 * cannot disagree with the order that follows it.
+	 *
+	 * It spends the promo budget exactly like a purchase does. A preview that validated codes for
+	 * free would be an unlimited oracle for guessing them, and the five-attempts rule in CLAUDE.md 2
+	 * would hold on one action while the other stood wide open.
+	 */
+	quotePrice: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { message: PLEASE_SIGN_IN } satisfies QuoteFailure);
+
+		const parsed = checkoutInput.parse(Object.fromEntries(await request.formData()));
+		if (!parsed.ok) return fail(400, { message: parsed.error } satisfies QuoteFailure);
+
+		const user = users.findById(locals.user.id);
+		if (!user) return fail(401, { message: PLEASE_SIGN_IN } satisfies QuoteFailure);
+
+		const promoCode = parsed.value.promoCode;
+		const limiterKey = String(locals.user.id);
+
+		if (promoCode) {
+			const budget = promoLimiter.peek(limiterKey);
+			if (!budget.allowed) {
+				return fail(429, {
+					message: promoRateLimitMessage(budget.retryAfterSec)
+				} satisfies QuoteFailure);
+			}
+		}
+
+		const priced = checkout.previewPrice(user, parsed.value.planId, promoCode);
+
+		if (!priced.ok) {
+			const rule = CHECKOUT_RULES[priced.error];
+
+			if (isPromoRefusal(priced.error)) {
+				if (isGuess(priced.error)) promoLimiter.consume(limiterKey);
+				// The reason, never the code: a working promo code is a bearer secret (CLAUDE.md 2).
+				log.info('quote_promo_refused', { requestId: locals.requestId, reason: priced.error });
+			}
+
+			return fail(rule.status, { message: rule.message } satisfies QuoteFailure);
+		}
+
+		return { quote: priced.value, promoCode: promoCode ?? null };
+	},
+
+	/**
 	 * tech.md 10, steps 1-5. The form posts what tech.md 10 step 1 says it posts — a plan id and,
 	 * optionally, the name of a promo code — and the server prices the order from the rows those two
 	 * name. There is deliberately nowhere in this action to say what anything costs (CLAUDE.md 2).
@@ -80,18 +135,14 @@ export const actions = {
 		 * check tech.md 9 asks for rather than a copy of the first: an order belongs to a person,
 		 * and that person comes off the session, never off the form.
 		 */
-		if (!locals.user) {
-			return fail(401, { message: 'Откройте приложение из Telegram, чтобы оплатить.' });
-		}
+		if (!locals.user) return fail(401, { message: PLEASE_SIGN_IN } satisfies CheckoutFailure);
 
 		const parsed = checkoutInput.parse(Object.fromEntries(await request.formData()));
 		if (!parsed.ok) return fail(400, { message: parsed.error } satisfies CheckoutFailure);
 
 		// The full row: the checkout needs stripeCustomerId, which SessionUser does not carry.
 		const user = users.findById(locals.user.id);
-		if (!user) {
-			return fail(401, { message: 'Откройте приложение из Telegram, чтобы оплатить.' });
-		}
+		if (!user) return fail(401, { message: PLEASE_SIGN_IN } satisfies CheckoutFailure);
 
 		const promoCode = parsed.value.promoCode;
 		const limiterKey = String(locals.user.id);

@@ -12,7 +12,7 @@
 	import { TELEGRAM_SESSION_KEY, type TelegramSession } from '$lib/client/telegram.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import Input from '$lib/ui/Input.svelte';
+	import Money from '$lib/ui/Money.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
 	import { toasts } from '$lib/ui/toasts.svelte';
 	import CheckoutStatus from './CheckoutStatus.svelte';
@@ -21,8 +21,10 @@
 	import { formatDateShort } from './dates';
 	import FeaturePills from './FeaturePills.svelte';
 	import PlanOption from './PlanOption.svelte';
+	import PromoField from './PromoField.svelte';
 	import { bestValuePlanId } from './plan-value';
 	import WelcomeHeader from './WelcomeHeader.svelte';
+	import type { PriceQuote } from '$lib/types';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -48,15 +50,30 @@
 	/** A failed checkout leaves a message on `form`; it must not sit under the next attempt's banner. */
 	let errorDismissed = $state(false);
 
-	/** tech.md 10, step 1: optional, and posted with whichever plan is bought. Typed in its own sheet,
-	 *  but it is one field shared by both — whatever is typed rides along with the purchase. */
+	/**
+	 * tech.md 10, step 1: optional, and posted with whichever plan is bought. It is typed in the buy
+	 * sheet now, next to the prices it changes.
+	 *
+	 * The quote beside it is what the server answered for exactly one pair — this code and this plan
+	 * — so it is kept with the plan it was quoted for. Change the plan and the number stops being
+	 * true; showing a stale one under a different tariff is worse than showing none.
+	 */
 	let promoCode = $state('');
+	let quote = $state<PriceQuote | null>(null);
+	let quotedPlanId = $state<number | null>(null);
+
+	let liveQuote = $derived(quote && quotedPlanId === selectedPlanId ? quote : null);
+
+	function applyQuote(next: PriceQuote | null, code: string) {
+		quote = next;
+		quotedPlanId = next ? selectedPlanId : null;
+		promoCode = next ? code : '';
+	}
 
 	// Open already if a no-JS submit came back with a refusal on this very load — the banner lives
 	// inside the sheet now, and a closed sheet would hide the one thing this reload has to say.
 	// untrack: only the value form carries on THIS load matters, same as PromoBlock's seed.
 	let buySheetOpen = $state(untrack(() => Boolean(form?.message)));
-	let promoSheetOpen = $state(false);
 
 	const watcher = checkoutWatcher;
 
@@ -107,18 +124,17 @@
 		});
 	});
 
-	/** Only one sheet is ever meant to be on screen; opening one puts the other away first. */
 	function openBuy() {
 		haptic();
-		promoSheetOpen = false;
 		buySheetOpen = true;
 	}
 
-	function openPromo() {
-		haptic();
-		buySheetOpen = false;
-		promoSheetOpen = true;
-	}
+	/**
+	 * «Промокод» on the plan card opens the same sheet Купить does. The code and the prices it
+	 * changes are one decision, and they were on two screens: the card's own button is kept because
+	 * it names the thing somebody came for, but it no longer leads anywhere separate.
+	 */
+	const openPromo = openBuy;
 
 	/**
 	 * Before a purchase there is nothing to install yet, so this opens the same sheet Купить does. A
@@ -227,12 +243,6 @@
 			description="Мы готовим их прямо сейчас. Загляните чуть позже."
 		/>
 	{:else}
-		{#if promoCode}
-			<p class="mb-3 text-2xs text-muted">
-				Промокод <span class="font-semibold text-accent">{promoCode}</span> применится к покупке.
-			</p>
-		{/if}
-
 		<div class="flex flex-col gap-2.5" role="radiogroup" aria-label="Тарифы">
 			{#each data.plans as plan (plan.id)}
 				<PlanOption
@@ -245,13 +255,41 @@
 			{/each}
 		</div>
 
+		<PromoField planId={selectedPlanId} disabled={locked} onquote={applyQuote} />
+
+		{#if liveQuote && liveQuote.discountMinor > 0}
+			<!--
+				The whole point of the rework: the number changes where somebody can see it change.
+				The server worked this out from the same calculator the order will use, so these three
+				lines are the price, not an estimate of it.
+			-->
+			<dl class="mt-4 rounded-plan bg-inset p-4 text-2xs" aria-live="polite">
+				<div class="flex items-baseline justify-between gap-3">
+					<dt class="text-muted">Тариф</dt>
+					<dd><Money minor={liveQuote.basePriceMinor} currency={liveQuote.currency} /></dd>
+				</div>
+				<div class="mt-2 flex items-baseline justify-between gap-3 text-accent">
+					<dt class="truncate">Промокод {liveQuote.promoCode}</dt>
+					<dd class="shrink-0">
+						&minus;<Money minor={liveQuote.discountMinor} currency={liveQuote.currency} />
+					</dd>
+				</div>
+				<div
+					class="mt-3 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-md font-bold"
+				>
+					<dt>К оплате</dt>
+					<dd><Money minor={liveQuote.finalPriceMinor} currency={liveQuote.currency} /></dd>
+				</div>
+			</dl>
+		{/if}
+
 		<!--
 			A form action, not a fetch wrapper (CLAUDE.md 1.5): CSRF by Origin and a working no-JS
 			submit come for free. Two fields, and neither is money: the plan id, and the name of a
 			promo code. What either is worth is read from the database — there is nowhere here to name
 			a price.
 		-->
-		<form method="POST" action="?/createCheckout" use:enhance={startCheckout} class="mt-5">
+		<form method="POST" action="?/createCheckout" use:enhance={startCheckout} class="mt-4">
 			<input type="hidden" name="planId" value={selectedPlanId ?? ''} />
 			<input type="hidden" name="promoCode" value={promoCode} />
 			<Button
@@ -274,22 +312,4 @@
 			<p class="mt-3 text-center text-3xs text-muted">Ключ придёт сразу после оплаты</p>
 		{/if}
 	{/if}
-</Sheet>
-
-<Sheet bind:open={promoSheetOpen} title="Промокод">
-	<Input
-		bind:value={promoCode}
-		aria-label="Промокод"
-		placeholder="Промокод"
-		maxlength={32}
-		uppercase
-	/>
-	<p class="mt-2 text-2xs text-muted">
-		<!-- Honest about where the number appears: the discount is applied when the order is priced,
-		     and the amount charged is on the payment page. -->
-		Скидка применится к выбранному тарифу на странице оплаты.
-	</p>
-	<Button class="mt-4 w-full" variant="ghost" onclick={() => (promoSheetOpen = false)}>
-		Готово
-	</Button>
 </Sheet>

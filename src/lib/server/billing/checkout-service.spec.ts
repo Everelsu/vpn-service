@@ -207,3 +207,55 @@ describe('CheckoutService.start', () => {
 		expect(order.providerSessionId).toBeNull();
 	});
 });
+
+/**
+ * The buy sheet shows this number before anybody pays, so the one property worth pinning is that it
+ * cannot disagree with the order that follows it: same plan, same code, same calculator.
+ */
+describe('CheckoutService.previewPrice', () => {
+	it('quotes what the order will actually be written for', async () => {
+		const user = addUser(db);
+		const plan = addPlan(db, { priceMinor: 499 });
+		addPromo(db, { code: 'START30', discountType: 'percent', discountValue: 30 });
+
+		const preview = checkout.previewPrice(user, plan.id, 'START30');
+		const started = await checkout.start(user, plan.id, 'START30');
+
+		expect(preview.ok).toBe(true);
+		expect(started.ok).toBe(true);
+
+		const order = orders.findById(started.ok ? started.value.orderId : 0)!;
+		expect(preview.ok && preview.value.finalPriceMinor).toBe(order.finalPriceMinor);
+		expect(preview.ok && preview.value.discountMinor).toBe(order.discountMinor);
+		expect(preview.ok && preview.value.basePriceMinor).toBe(order.basePriceMinor);
+	});
+
+	it('quotes full price when no code was typed', () => {
+		const user = addUser(db);
+		const plan = addPlan(db, { priceMinor: 499 });
+
+		const preview = checkout.previewPrice(user, plan.id);
+
+		expect(preview.ok && preview.value.discountMinor).toBe(0);
+		expect(preview.ok && preview.value.finalPriceMinor).toBe(499);
+		expect(preview.ok && preview.value.promoCode).toBeNull();
+	});
+
+	it('refuses a bad code with the same reason a purchase would', () => {
+		const user = addUser(db);
+		const plan = addPlan(db, { priceMinor: 499 });
+
+		const preview = checkout.previewPrice(user, plan.id, 'NOPE');
+
+		expect(preview).toEqual({ ok: false, error: 'promo_not_found' });
+	});
+
+	it('writes nothing: a preview is not a purchase', () => {
+		const user = addUser(db);
+		const plan = addPlan(db, { priceMinor: 499 });
+
+		checkout.previewPrice(user, plan.id);
+
+		expect(orders.listForUser(user.id)).toHaveLength(0);
+	});
+});
