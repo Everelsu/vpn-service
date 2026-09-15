@@ -251,6 +251,39 @@
 	background: var(--color-surface);
 	border: 1px solid var(--color-line);
 	border-radius: var(--radius-card);
+	/* A one-pixel lit top edge. The fill step between a near-black page and a near-black card is
+	   small by design, and this is what makes the card read as a plane catching light rather than as
+	   a slightly lighter rectangle. It is the cheapest depth in the whole design. */
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+/**
+ * The one surface that carries the brand instead of merely sitting in it — the current subscription,
+ * and nothing else per screen. A low purple wash from the top-left corner plus an accent-tinted
+ * hairline marks it as the subject without spending the accent on a second button, which is what
+ * would happen if the card competed by being brighter.
+ */
+@utility card-brand {
+	background:
+		radial-gradient(125% 140% at 0% 0%, rgb(199 138 255 / 0.15) 0%, rgb(199 138 255 / 0) 58%),
+		var(--color-surface);
+	border: 1px solid rgb(199 138 255 / 0.18);
+	border-radius: var(--radius-card);
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+/**
+ * A filled accent button on a true-black page has no ground to separate it from: its fill is the
+ * brightest thing on screen and stops dead at its own edge. A short glow in the button's own hue
+ * gives it one. This is the only place in the design that spends light instead of a hairline, which
+ * is what keeps it reading as the action rather than as decoration.
+ */
+@utility glow-accent {
+	box-shadow: 0 10px 30px -12px rgb(199 138 255 / 0.55);
+}
+
+@utility glow-danger {
+	box-shadow: 0 10px 30px -12px rgb(255 73 110 / 0.5);
 }
 
 /* The tab bar floats over the page, so it is the one place that leans on blur. */

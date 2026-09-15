@@ -1,23 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="VPN">
-	<title>VPN</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="NV">
+	<title>NV</title>
 	<!--
-		A shield for the product and a crescent for the palette it lives in: one mark, two paths, no
-		gradient. It is drawn to survive a 16px favicon, so the crescent is a third of the shield and
-		the gap between them never closes, which a thinner glyph would do at that size.
+		The monogram is drawn as paths, not set as text. An SVG favicon is rendered outside the
+		document, where the app's webfont is not loaded and a <text> element would silently fall back
+		to whatever the OS offers - a different logo per platform. These outlines follow Space Grotesk:
+		geometric, slightly condensed, flat terminals, one stroke weight.
 
-		The two colours are the theme tokens spelled literally, because a favicon is fetched outside
-		the document and inherits no CSS: #0a0512 is the on-accent token, #c78aff the accent.
-		Note for anyone editing this comment: XML forbids a double hyphen inside one, so the tokens
-		cannot be written here with their CSS prefix.
+		The two colours are the theme tokens spelled literally, for the same reason: a favicon inherits
+		no CSS. #0a0512 is the on-accent token, #c78aff the accent. Note for anyone editing this
+		comment - XML forbids a double hyphen inside one, so the tokens cannot be written here with
+		their CSS prefix.
 	-->
 	<rect width="48" height="48" rx="11" fill="#0a0512" />
-	<path
-		d="M24 8.5 L36 12.8 V24.5 C36 32.4 30.8 37.9 24 40.2 C17.2 37.9 12 32.4 12 24.5 V12.8 Z"
-		fill="#c78aff"
-	/>
-	<path
-		d="M26.8 15.6 A7.6 7.6 0 1 0 26.8 30.4 A8 8 0 0 1 26.8 15.6 Z"
-		fill="#0a0512"
-		transform="translate(1.9 0)"
-	/>
+	<path d="M9 34 V14 H13.5 L20 27.5 V14 H24.5 V34 H20 L13.5 20.5 V34 Z" fill="#c78aff" />
+	<path d="M27 14 H31.2 L33 26.5 L34.8 14 H39 L35.4 34 H30.6 Z" fill="#c78aff" />
 </svg>

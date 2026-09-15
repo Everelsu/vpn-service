@@ -36,9 +36,9 @@
 	 * a pair of them under a primary from reading as three equal choices.
 	 */
 	const VARIANTS: Record<NonNullable<Props['variant']>, string> = {
-		primary: 'bg-accent font-bold text-on-accent',
+		primary: 'glow-accent bg-accent font-bold text-on-accent',
 		ghost: 'border border-line bg-white/[0.06] font-medium text-ink',
-		danger: 'bg-danger font-bold text-on-accent'
+		danger: 'glow-danger bg-danger font-bold text-on-accent'
 	};
 
 	/**

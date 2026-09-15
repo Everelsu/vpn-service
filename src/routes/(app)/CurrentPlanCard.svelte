@@ -65,7 +65,8 @@
 
 <SectionHeading title="Текущий план" />
 
-<Card>
+<!-- The subject of the home screen, so it takes the one brand tone the screen is allowed. -->
+<Card tone="brand">
 	<div class="flex items-start justify-between gap-3">
 		<div class="min-w-0">
 			<!-- Wraps rather than truncates: a plan name is free text and this is the largest type on
