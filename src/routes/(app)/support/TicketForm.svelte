@@ -61,6 +61,15 @@
 		};
 	}}
 >
+	<!--
+		Said before the message is written, not after it is sent. The one thing somebody needs to know
+		here is where the answer lands, and the old screen only mentioned it on the confirmation card
+		— after they had already wondered.
+	-->
+	<p class="mb-3 text-2xs text-muted">
+		Ответ придёт сообщением от бота в этот же чат. Обычно отвечаем в течение дня.
+	</p>
+
 	<Textarea
 		bind:value={text}
 		name="message"
@@ -88,7 +97,9 @@
 				<CircleCheck class="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
 				<div class="min-w-0">
 					<p class="text-md font-bold">Отправили</p>
-					<p class="mt-2 text-2xs text-muted">Админ ответит вам в личку в Telegram.</p>
+					<p class="mt-2 text-2xs text-muted">
+						Ответ придёт сообщением от бота — закрывать приложение можно.
+					</p>
 				</div>
 			</div>
 		</Card>

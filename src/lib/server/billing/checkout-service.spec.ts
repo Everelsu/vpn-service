@@ -256,6 +256,6 @@ describe('CheckoutService.previewPrice', () => {
 
 		checkout.previewPrice(user, plan.id);
 
-		expect(orders.listForUser(user.id)).toHaveLength(0);
+		expect(orders.listForUser(user.id, 10)).toHaveLength(0);
 	});
 });

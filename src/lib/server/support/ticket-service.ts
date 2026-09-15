@@ -126,6 +126,26 @@ export class SupportTicketService {
 	}
 
 	/**
+	 * The thread back from Telegram. When the admin swipes-to-reply in their own chat, the only
+	 * thing the update carries about what they are answering is the id of the message they replied
+	 * to — which is exactly what `markDelivered` wrote here, and the reason that column exists.
+	 *
+	 * Newest first and one row: `admin_message_id` carries no unique constraint, and a panel that
+	 * was ever re-delivered could in principle hold two. Answering the most recent is the only
+	 * reading that cannot send somebody a reply to an older request of theirs.
+	 */
+	findByAdminMessageId(adminMessageId: number): SupportTicketRow | null {
+		return (
+			this.db
+				.select()
+				.from(supportTickets)
+				.where(eq(supportTickets.adminMessageId, adminMessageId))
+				.orderBy(desc(supportTickets.id))
+				.get() ?? null
+		);
+	}
+
+	/**
 	 * The newest requests, for the admin panel (A16, tech.md 11). Rows, not views: the view needs the
 	 * author beside the ticket and the join belongs to whoever assembles it, not to this table's
 	 * owner.

@@ -167,3 +167,44 @@ describe('SupportTicketService delivery marks', () => {
 		expect(service.findById(id)?.status).toBe('delivered');
 	});
 });
+
+/**
+ * The return path of the relay: the admin swipes to reply in their own chat, and the only thing the
+ * update carries about what they are answering is the id of the message they replied to.
+ */
+describe('finding the ticket a reply is about', () => {
+	it('finds the ticket the forwarded message belongs to', () => {
+		const ticket = write();
+		expect(ticket.ok).toBe(true);
+		if (!ticket.ok) return;
+
+		service.markDelivered(ticket.value.id, 777);
+
+		expect(service.findByAdminMessageId(777)?.id).toBe(ticket.value.id);
+	});
+
+	it('answers nothing for a message that is not a forwarded request', () => {
+		expect(service.findByAdminMessageId(4242)).toBeNull();
+	});
+
+	it('never matches a request that was never delivered', () => {
+		const ticket = write();
+		expect(ticket.ok).toBe(true);
+
+		// adminMessageId is NULL until markDelivered writes it; a reply cannot name a NULL.
+		expect(service.findByAdminMessageId(0)).toBeNull();
+	});
+
+	it('answers the newest request when one message id was written twice', () => {
+		const first = write('Первое обращение, его уже закрыли.');
+		clock.advance(1000);
+		const second = write('Второе обращение, отвечать надо на него.');
+		expect(first.ok && second.ok).toBe(true);
+		if (!first.ok || !second.ok) return;
+
+		service.markDelivered(first.value.id, 555);
+		service.markDelivered(second.value.id, 555);
+
+		expect(service.findByAdminMessageId(555)?.id).toBe(second.value.id);
+	});
+});
