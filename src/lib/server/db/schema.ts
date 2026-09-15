@@ -1,5 +1,5 @@
 import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
-import type { PlanSnapshot } from '$lib/types';
+import { CURRENCIES, type Currency, type PlanSnapshot } from '$lib/types';
 
 const timestamp = (name: string) => integer(name, { mode: 'timestamp_ms' });
 
@@ -23,7 +23,13 @@ export const plans = sqliteTable('plans', {
 	description: text('description'),
 	durationDays: integer('duration_days').notNull(), // 7 | 30 | 90, field itself is free
 	priceMinor: integer('price_minor').notNull(), // cents, not below MIN_CHARGE_MINOR
-	currency: text('currency', { enum: ['usd', 'eur'] }).notNull(),
+	// Spelled from CURRENCIES rather than repeated here: this enum is type-level only in SQLite, so a
+	// hand-copied list drifts from lib/types silently and the drift only shows up as a failed insert.
+	// Spelled from CURRENCIES rather than repeated here: in SQLite this enum is type-level only, so a
+	// hand-copied list drifts from lib/types in silence and the drift surfaces as a failed insert. The
+	// cast only restates it as the non-empty tuple drizzle asks for; the member type is unchanged, so
+	// PlanRow.currency stays Currency and not string.
+	currency: text('currency', { enum: CURRENCIES as readonly [Currency, ...Currency[]] }).notNull(),
 	trafficLimitBytes: integer('traffic_limit_bytes').notNull().default(0), // 0 = unlimited
 	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 	sortOrder: integer('sort_order').notNull().default(0),
