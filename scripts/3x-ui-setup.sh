@@ -17,6 +17,7 @@ set -euo pipefail
 
 PANEL_PORT="${PANEL_PORT:-2053}"
 REALITY_PORT="${REALITY_PORT:-8443}"
+TZ_NAME="${TZ_NAME:-Asia/Chita}"
 DIR="${DIR:-/opt/3x-ui}"
 MARZBAN_DIR="${MARZBAN_DIR:-/opt/vpn-service}"
 
@@ -73,6 +74,9 @@ services:
     environment:
       XRAY_VMESS_AEAD_FORCED: "false"
       XUI_ENABLE_FAIL2BAN: "true"
+      # The IP log and Xray's access log are stamped by the container clock, which is UTC unless
+      # this says otherwise. The panel's own timezone setting moves scheduled tasks only.
+      TZ: "${TZ_NAME}"
     tty: true
     ports:
       # Панель только на петле: снаружи в неё не ходят, только через SSH-туннель.
