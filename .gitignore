@@ -26,3 +26,4 @@ test-results
 
 # Local database
 /data
+/static/brand
